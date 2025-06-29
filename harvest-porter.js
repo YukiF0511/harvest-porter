@@ -197,7 +197,7 @@ class HarvestPorterGame {
                 timerText = `<div class="timer">⏰ もどるまで: ${seconds}びょう</div>`;
             } else if (tractor.currentLoad > 0) {
                 // 積載がある待機中のトラクターには操作ボタンを表示
-                controlButton = `<button class="tractor-control-btn" onclick="openTractorControl()">🎮 そうさ (${tractor.currentLoad}こ)</button>`;
+                controlButton = `<button class="tractor-control-btn" onclick="openTractorControl(${tractor.id})">🎮 そうさ (${tractor.currentLoad}こ)</button>`;
                 console.log('操作ボタンを表示:', tractor.id, tractor.currentLoad);
             } else {
                 // 空の待機中トラクター
@@ -1079,22 +1079,22 @@ function switchTab(tabName) {
 }
 
 // トラクター操作関数
-function openTractorControl() {
-    console.log('トラクター操作画面を開く');
+function openTractorControl(tractorId) {
+    console.log('トラクター操作画面を開く - ID:', tractorId);
     console.log('現在のトラクター状態:', game.tractors);
     
-    // 利用可能なトラクターがあるかチェック
-    const availableTractor = game.tractors.find(t => t.state === 'idle' && t.currentLoad > 0);
-    console.log('利用可能なトラクター:', availableTractor);
+    // 指定されたIDのトラクターを取得
+    const targetTractor = game.tractors.find(t => t.id === tractorId);
+    console.log('対象トラクター:', targetTractor);
     
-    if (!availableTractor) {
-        // デバッグ情報を追加
-        const idleTractors = game.tractors.filter(t => t.state === 'idle');
-        const loadedTractors = game.tractors.filter(t => t.currentLoad > 0);
-        console.log('待機中のトラクター:', idleTractors);
-        console.log('積載があるトラクター:', loadedTractors);
-        
-        game.showNotification('🚜 そうさできるトラクターがありません（つみにがひつようです）', 'warning');
+    if (!targetTractor) {
+        game.showNotification('🚜 指定されたトラクターが見つかりません', 'error');
+        return;
+    }
+    
+    // トラクターが操作可能かチェック
+    if (targetTractor.state !== 'idle' || targetTractor.currentLoad <= 0) {
+        game.showNotification('🚜 このトラクターは操作できません（待機中で積載が必要です）', 'warning');
         return;
     }
     
@@ -1124,16 +1124,16 @@ function openTractorControl() {
             
             deliveryInterface.innerHTML = `
                 <div class="delivery-info">
-                    <h3>🚜 トラクター #${availableTractor.id + 1}</h3>
-                    <p><strong>つみに:</strong> ${availableTractor.currentLoad}/${availableTractor.capacity}こ</p>
-                    <p><strong>じょうたい:</strong> ${availableTractor.state === 'idle' ? 'たいきちゅう' : 'うんぱんちゅう'}</p>
-                    <p><strong>しゅうにゅうよてい:</strong> ${availableTractor.currentLoad * 80}G</p>
+                    <h3>🚜 トラクター #${targetTractor.id + 1}</h3>
+                    <p><strong>つみに:</strong> ${targetTractor.currentLoad}/${targetTractor.capacity}こ</p>
+                    <p><strong>じょうたい:</strong> ${targetTractor.state === 'idle' ? 'たいきちゅう' : 'うんぱんちゅう'}</p>
+                    <p><strong>しゅうにゅうよてい:</strong> ${targetTractor.currentLoad * 80}G</p>
                 </div>
                 <div class="delivery-buttons">
-                    <button onclick="game.startTractorGame(${availableTractor.id})" class="manual-delivery-btn">
+                    <button onclick="game.startTractorGame(${targetTractor.id})" class="manual-delivery-btn">
                         🎮 じぶんでうんてん
                     </button>
-                    <button onclick="game.startSimpleDelivery(${availableTractor.id})" class="delivery-btn">
+                    <button onclick="game.startSimpleDelivery(${targetTractor.id})" class="delivery-btn">
                         📦 かんたんしゅっか
                     </button>
                     <button onclick="closeTractorControl()" class="cancel-btn">
@@ -1145,9 +1145,9 @@ function openTractorControl() {
     } else {
         console.log('モーダルが見つからないため、確認ダイアログを表示');
         // モーダルが見つからない場合は簡単な確認ダイアログ
-        const proceed = confirm(`🚜 トラクターでしゅっかしますか？\nつみに: ${availableTractor.currentLoad}こ\nしゅうにゅう: ${availableTractor.currentLoad * 80}G`);
+        const proceed = confirm(`🚜 トラクターでしゅっかしますか？\nつみに: ${targetTractor.currentLoad}こ\nしゅうにゅう: ${targetTractor.currentLoad * 80}G`);
         if (proceed) {
-            game.startSimpleDelivery(availableTractor.id);
+            game.startSimpleDelivery(targetTractor.id);
         }
     }
 }
