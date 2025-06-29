@@ -1,14 +1,14 @@
-// ハーベスト・ポーター v2.1.1
+// ハーベスト・ポーター v2.1.2
 // 農業経営シミュレーションゲーム
-// 更新内容: トラクター操作画面のエラー修正、cargo初期化処理改善
+// 更新内容: バージョン管理システムのテスト
 
-console.log('🚜 ハーベスト・ポーター v2.1.1 読み込み完了');
+console.log('🚜 ハーベスト・ポーター v2.1.2 読み込み完了');
 
 // 最小限のゲームクラス（テスト用）
 class HarvestPorterGame {
     constructor() {
         console.log('ゲーム初期化開始');
-        this.version = '2.1.1';
+        this.version = '2.1.2';
         this.money = 1000;
         this.bankruptcyEnabled = false;
         this.isGameOver = false;
