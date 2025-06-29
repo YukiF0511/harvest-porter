@@ -42,6 +42,13 @@ class HarvestPorterGame {
                 hireCost: 300,
                 wageCost: 60,
                 description: 'じどうてきにしゅうかくします'
+            },
+            driver: {
+                name: 'うんてんしゅさん',
+                icon: '🚛',
+                hireCost: 500,
+                wageCost: 80,
+                description: 'じどうてきにトラクターをうんてんします'
             }
         };
         
@@ -565,7 +572,7 @@ class HarvestPorterGame {
     
     // 簡単出荷機能
     startSimpleDelivery(tractorId) {
-        const tractor = this.tractors[tractorId];
+        const tractor = this.tractors.find(t => t.id === tractorId);
         if (!tractor || tractor.state !== 'idle' || tractor.currentLoad === 0) {
             this.showNotification('🚜 しゅっかできません', 'error');
             return;
@@ -967,6 +974,8 @@ class HarvestPorterGame {
                     this.autoPlantSeeds();
                 } else if (worker.type === 'harvester') {
                     this.autoHarvestCrops();
+                } else if (worker.type === 'driver') {
+                    this.autoOperateTractors();
                 }
             }
         });
@@ -988,6 +997,17 @@ class HarvestPorterGame {
         const readyField = this.fields.find(f => f.state === 'ready');
         if (readyField) {
             this.harvestField(readyField.id);
+        }
+    }
+    
+    // 自動トラクター操作
+    autoOperateTractors() {
+        // 積載があって待機中のトラクターを探す
+        const loadedTractor = this.tractors.find(t => t.state === 'idle' && t.currentLoad > 0);
+        if (loadedTractor) {
+            // 自動出荷を実行
+            this.startSimpleDelivery(loadedTractor.id);
+            console.log(`運転手がトラクター#${loadedTractor.id}を自動出荷しました`);
         }
     }
     
