@@ -15,7 +15,7 @@ class HarvestPorterGame {
         ];
         
         this.tractors = [
-            { id: 0, capacity: 10, currentLoad: 0, state: 'idle', returnTime: 0, roundTripTime: 8000 }
+            { id: 0, capacity: 10, currentLoad: 0, state: 'idle', returnTime: 0, roundTripTime: 8000, cargo: [] }
         ];
         
         this.ownedSeeds = ['apple', 'orange'];
@@ -355,7 +355,12 @@ class HarvestPorterGame {
         if (availableTractor) {
             // トラクターに積み込み
             availableTractor.currentLoad += 1;
+            availableTractor.cargo.push({
+                cropType: field.crop,
+                sellPrice: crop.sellPrice
+            });
             console.log('トラクターに積み込み完了。新しい積載量:', availableTractor.currentLoad);
+            console.log('積載内容:', availableTractor.cargo);
             
             // 畑をリセット
             field.state = 'empty';
@@ -474,8 +479,15 @@ class HarvestPorterGame {
                     { id: 4, state: 'empty', crop: null, plantTime: 0, growthTime: 0 }
                 ];
                 this.tractors = data.tractors || [
-                    { id: 0, capacity: 10, currentLoad: 0, state: 'idle', returnTime: 0, roundTripTime: 8000 }
+                    { id: 0, capacity: 10, currentLoad: 0, state: 'idle', returnTime: 0, roundTripTime: 8000, cargo: [] }
                 ];
+                
+                // 古いセーブデータ対応：cargoプロパティがないトラクターに追加
+                this.tractors.forEach(tractor => {
+                    if (!tractor.cargo) {
+                        tractor.cargo = [];
+                    }
+                });
                 this.workers = data.workers || [];
                 this.currentWorkerId = data.currentWorkerId || 0;
                 this.ownedSeeds = data.ownedSeeds || ['apple', 'orange'];
@@ -530,13 +542,13 @@ class HarvestPorterGame {
                 
                 if (remaining > 0) {
                     // まだ配送中
-                    const earnings = tractor.currentLoad * 80;
+                    const earnings = this.calculateCargoValue(tractor);
                     setTimeout(() => {
                         this.completeDelivery(tractorId, earnings);
                     }, remaining);
                 } else {
                     // 既に配送完了している
-                    const earnings = tractor.currentLoad * 80;
+                    const earnings = this.calculateCargoValue(tractor);
                     this.completeDelivery(tractorId, earnings);
                 }
             }
@@ -572,6 +584,16 @@ class HarvestPorterGame {
         }
     }
     
+    // トラクターの積載価値を計算
+    calculateCargoValue(tractor) {
+        if (!tractor.cargo || tractor.cargo.length === 0) {
+            // 古いセーブデータ対応：cargoがない場合は80G固定で計算
+            return tractor.currentLoad * 80;
+        }
+        
+        return tractor.cargo.reduce((total, item) => total + item.sellPrice, 0);
+    }
+    
     // 簡単出荷機能
     startSimpleDelivery(tractorId) {
         const tractor = this.tractors.find(t => t.id === tractorId);
@@ -581,7 +603,7 @@ class HarvestPorterGame {
         }
         
         // 出荷開始
-        const earnings = tractor.currentLoad * 80; // 1個80Gで計算
+        const earnings = this.calculateCargoValue(tractor); // 実際の作物価格で計算
         tractor.state = 'transporting';
         
         // 倍速を適用した運搬時間
@@ -611,6 +633,7 @@ class HarvestPorterGame {
         tractor.state = 'idle';
         tractor.currentLoad = 0;
         tractor.returnTime = 0;
+        tractor.cargo = []; // 積載内容をクリア
         
         // お金を追加
         this.money += earnings;
@@ -778,7 +801,8 @@ class HarvestPorterGame {
                 currentLoad: 0,
                 state: 'idle',
                 returnTime: 0,
-                roundTripTime: 8000
+                roundTripTime: 8000,
+                cargo: []
             });
             
             this.showNotification(`✅ あたらしいトラクターをこうにゅうしました！ (-${tractorPrice}G)`, 'success');
@@ -1153,7 +1177,7 @@ function openTractorControl(tractorId) {
                     <h3>🚜 トラクター #${targetTractor.id + 1}</h3>
                     <p><strong>つみに:</strong> ${targetTractor.currentLoad}/${targetTractor.capacity}こ</p>
                     <p><strong>じょうたい:</strong> ${targetTractor.state === 'idle' ? 'たいきちゅう' : 'うんぱんちゅう'}</p>
-                    <p><strong>しゅうにゅうよてい:</strong> ${targetTractor.currentLoad * 80}G</p>
+                    <p><strong>しゅうにゅうよてい:</strong> ${this.calculateCargoValue(targetTractor)}G</p>
                 </div>
                 <div class="delivery-buttons">
                     <button onclick="game.startTractorGame(${targetTractor.id})" class="manual-delivery-btn">
@@ -1171,7 +1195,7 @@ function openTractorControl(tractorId) {
     } else {
         console.log('モーダルが見つからないため、確認ダイアログを表示');
         // モーダルが見つからない場合は簡単な確認ダイアログ
-        const proceed = confirm(`🚜 トラクターでしゅっかしますか？\nつみに: ${targetTractor.currentLoad}こ\nしゅうにゅう: ${targetTractor.currentLoad * 80}G`);
+        const proceed = confirm(`🚜 トラクターでしゅっかしますか？\nつみに: ${targetTractor.currentLoad}こ\nしゅうにゅう: ${game.calculateCargoValue(targetTractor)}G`);
         if (proceed) {
             game.startSimpleDelivery(targetTractor.id);
         }
