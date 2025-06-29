@@ -79,6 +79,15 @@ class HarvestPorterGame {
     init() {
         console.log('init開始');
         this.loadGame(); // セーブデータを読み込み
+        
+        // 既存のトラクターにcargoプロパティを確実に追加
+        this.tractors.forEach(tractor => {
+            if (!tractor.cargo) {
+                tractor.cargo = [];
+                console.log(`トラクター#${tractor.id}にcargoプロパティを追加`);
+            }
+        });
+        
         this.updateDisplay();
         this.renderFields(); // 畑の表示を追加
         this.renderTractors(); // トラクターの表示を追加
@@ -619,12 +628,22 @@ class HarvestPorterGame {
     
     // トラクターの積載価値を計算
     calculateCargoValue(tractor) {
+        console.log('calculateCargoValue called with:', tractor);
+        
+        if (!tractor) {
+            console.warn('トラクターが存在しません');
+            return 0;
+        }
+        
         if (!tractor.cargo || tractor.cargo.length === 0) {
             // 古いセーブデータ対応：cargoがない場合は80G固定で計算
+            console.log('cargoが存在しないため、固定価格で計算:', tractor.currentLoad * 80);
             return tractor.currentLoad * 80;
         }
         
-        return tractor.cargo.reduce((total, item) => total + item.sellPrice, 0);
+        const totalValue = tractor.cargo.reduce((total, item) => total + item.sellPrice, 0);
+        console.log('cargo価値計算結果:', totalValue);
+        return totalValue;
     }
     
     // 簡単出荷機能
@@ -1213,7 +1232,7 @@ function openTractorControl(tractorId) {
                     <h3>🚜 トラクター #${targetTractor.id + 1}</h3>
                     <p><strong>つみに:</strong> ${targetTractor.currentLoad}/${targetTractor.capacity}こ</p>
                     <p><strong>じょうたい:</strong> ${targetTractor.state === 'idle' ? 'たいきちゅう' : 'うんぱんちゅう'}</p>
-                    <p><strong>しゅうにゅうよてい:</strong> ${this.calculateCargoValue(targetTractor)}G</p>
+                    <p><strong>しゅうにゅうよてい:</strong> ${game.calculateCargoValue(targetTractor)}G</p>
                 </div>
                 <div class="delivery-buttons">
                     <button onclick="game.startTractorGame(${targetTractor.id})" class="manual-delivery-btn">
