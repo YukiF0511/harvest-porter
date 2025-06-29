@@ -48,7 +48,7 @@ class HarvestPorterGame {
                 icon: '🚛',
                 hireCost: 500,
                 wageCost: 80,
-                description: 'じどうてきにトラクターをうんてんします'
+                description: 'まんたんのトラクターをじどうしゅっかします'
             }
         };
         
@@ -370,9 +370,18 @@ class HarvestPorterGame {
             
             this.showNotification(`✅ ${crop.name}をしゅうかくしました！トラクターにつみこみました`, 'success');
             
-            // トラクターが満載になったら自動出荷の提案
+            // トラクターが満載になったら自動出荷の提案または自動実行
             if (availableTractor.currentLoad >= availableTractor.capacity) {
-                this.showNotification(`🚜 トラクターがまんさいです！そうさしてしゅっかしましょう`, 'info');
+                // トラクター運転手がいるかチェック
+                const driverWorker = this.workers.find(w => w.type === 'driver' && w.isActive);
+                if (driverWorker) {
+                    // 運転手がいる場合は自動出荷
+                    this.startSimpleDelivery(availableTractor.id);
+                    this.showNotification(`🚛 運転手がトラクターを自動出荷しました！`, 'success');
+                } else {
+                    // 運転手がいない場合は手動操作を促す
+                    this.showNotification(`🚜 トラクターがまんさいです！そうさしてしゅっかしましょう`, 'info');
+                }
             }
         } else {
             console.log('利用可能なトラクターがないため直接販売');
@@ -1032,12 +1041,12 @@ class HarvestPorterGame {
     
     // 自動トラクター操作
     autoOperateTractors() {
-        // 積載があって待機中のトラクターを探す
-        const loadedTractor = this.tractors.find(t => t.state === 'idle' && t.currentLoad > 0);
-        if (loadedTractor) {
+        // 満タンで待機中のトラクターを探す
+        const fullTractor = this.tractors.find(t => t.state === 'idle' && t.currentLoad >= t.capacity);
+        if (fullTractor) {
             // 自動出荷を実行
-            this.startSimpleDelivery(loadedTractor.id);
-            console.log(`運転手がトラクター#${loadedTractor.id}を自動出荷しました`);
+            this.startSimpleDelivery(fullTractor.id);
+            console.log(`運転手がトラクター#${fullTractor.id}を自動出荷しました（満タン: ${fullTractor.currentLoad}/${fullTractor.capacity}）`);
         }
     }
     
