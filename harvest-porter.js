@@ -1,7 +1,14 @@
+// ハーベスト・ポーター v2.1.0
+// 農業経営シミュレーションゲーム
+// 更新内容: トラクター操作難易度調整、お金アイテム追加、トラクター運転手改善
+
+console.log('🚜 ハーベスト・ポーター v2.1.0 読み込み完了');
+
 // 最小限のゲームクラス（テスト用）
 class HarvestPorterGame {
     constructor() {
         console.log('ゲーム初期化開始');
+        this.version = '2.1.0';
         this.money = 1000;
         this.bankruptcyEnabled = false;
         this.isGameOver = false;
@@ -99,6 +106,23 @@ class HarvestPorterGame {
         setInterval(() => {
             this.payWages();
         }, 60000);
+        
+        // バージョン情報を表示
+        this.showVersionInfo();
+    }
+    
+    // バージョン情報表示
+    showVersionInfo() {
+        console.log(`%c🚜 ハーベスト・ポーター v${this.version}`, 'color: #2d4a22; font-size: 16px; font-weight: bold;');
+        console.log('更新内容: トラクター操作難易度調整、お金アイテム追加、トラクター運転手改善');
+        
+        // 初回起動時のみ通知を表示
+        if (!localStorage.getItem('harvestPorterVersionShown_' + this.version)) {
+            setTimeout(() => {
+                this.showNotification(`🎉 v${this.version} にアップデート！新機能が追加されました`, 'info');
+            }, 2000);
+            localStorage.setItem('harvestPorterVersionShown_' + this.version, 'true');
+        }
     }
     
     // トラクター状態更新
