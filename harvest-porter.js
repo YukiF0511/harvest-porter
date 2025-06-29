@@ -52,6 +52,8 @@ class HarvestPorterGame {
             }
         };
         
+        console.log('労働者タイプが初期化されました:', Object.keys(this.workerTypes));
+        
         this.cropData = {
             apple: { name: 'りんご', icon: '🍎', seedPrice: 50, growthTime: 10000, sellPrice: 80, unlocked: true },
             orange: { name: 'みかん', icon: '🍊', seedPrice: 30, growthTime: 8000, sellPrice: 50, unlocked: true },
@@ -854,8 +856,12 @@ class HarvestPorterGame {
     
     // 労働者雇用機能
     hireWorker(workerType) {
+        console.log('雇用しようとしている労働者タイプ:', workerType);
+        console.log('利用可能な労働者タイプ:', Object.keys(this.workerTypes));
+        
         const workerInfo = this.workerTypes[workerType];
         if (!workerInfo) {
+            console.log('労働者情報が見つかりません:', workerType);
             this.showNotification('❌ ふめいなろうどうしゃタイプです', 'error');
             return;
         }
