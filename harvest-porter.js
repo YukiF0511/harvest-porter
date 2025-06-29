@@ -715,8 +715,8 @@ class HarvestPorterGame {
         if (stats) stats.style.display = 'block';
         
         // トラクターミニゲームを開始
-        this.currentTractorGame = new TractorMiniGame(tractor, (success, finalLoad) => {
-            this.completeTractorGame(tractorId, success, finalLoad, earnings);
+        this.currentTractorGame = new TractorMiniGame(tractor, (success, finalLoad, bonusMoney) => {
+            this.completeTractorGame(tractorId, success, finalLoad, earnings, bonusMoney);
         });
         
         this.showNotification('🚜 うんてんかいし！がんばって！', 'success');
@@ -724,7 +724,7 @@ class HarvestPorterGame {
     }
     
     // トラクターゲーム完了処理
-    completeTractorGame(tractorId, success, finalLoad, baseEarnings) {
+    completeTractorGame(tractorId, success, finalLoad, baseEarnings, bonusMoney = 0) {
         const tractor = this.tractors[tractorId];
         if (!tractor) return;
         
@@ -732,16 +732,19 @@ class HarvestPorterGame {
         tractor.state = 'idle';
         tractor.currentLoad = 0;
         tractor.returnTime = 0;
+        tractor.cargo = []; // 積載内容をクリア
         
         let earnings = 0;
         if (success) {
-            // 成功時は積載量に応じた収入 + ボーナス
-            earnings = finalLoad * 80 + (finalLoad * 20); // ボーナス20G/個
-            this.showNotification(`🎉 うんてんせいこう！ +${earnings}G (ボーナスこみ)`, 'success');
+            // 成功時は実際の貨物価値 + 運転ボーナス + 拾ったお金
+            const cargoValue = this.calculateCargoValue(tractor) || (finalLoad * 80);
+            const drivingBonus = finalLoad * 20; // 運転ボーナス20G/個
+            earnings = cargoValue + drivingBonus + bonusMoney;
+            this.showNotification(`🎉 うんてんせいこう！ +${earnings}G (ボーナス+${drivingBonus + bonusMoney}G)`, 'success');
         } else {
-            // 失敗時は半額
-            earnings = Math.floor(baseEarnings * 0.5);
-            this.showNotification(`😅 うんてんしっぱい... +${earnings}G (はんがく)`, 'warning');
+            // 失敗時は半額 + 拾ったお金
+            earnings = Math.floor(baseEarnings * 0.5) + bonusMoney;
+            this.showNotification(`😅 うんてんしっぱい... +${earnings}G (はんがく+ボーナス${bonusMoney}G)`, 'warning');
         }
         
         // お金を追加
@@ -1294,9 +1297,13 @@ class TractorMiniGame {
         this.canvas = document.getElementById('tractor-canvas');
         this.ctx = this.canvas.getContext('2d');
         
+        // 貨物の価値を計算して難易度を設定
+        this.cargoValue = game.calculateCargoValue(tractor);
+        this.difficulty = this.calculateDifficulty(this.cargoValue);
+        
         // ゲーム状態
         this.isRunning = true;
-        this.gameTime = 60; // 60秒制限に延長
+        this.gameTime = Math.max(30, 60 - this.difficulty * 5); // 難易度に応じて時間制限を調整
         this.currentLoad = tractor.currentLoad;
         this.maxLoad = tractor.capacity;
         
@@ -1304,14 +1311,20 @@ class TractorMiniGame {
         this.tractorX = 50;
         this.tractorY = 200;
         this.speed = 0;
-        this.maxSpeed = 5;
+        this.maxSpeed = Math.max(3, 5 - this.difficulty * 0.3); // 難易度に応じて最大速度を調整
         this.fuel = 100;
         this.distance = 0;
-        this.targetDistance = 2000; // 目標距離を2000mに増加
+        this.targetDistance = 2000 + this.difficulty * 200; // 難易度に応じて距離を延長
         
         // 障害物
         this.obstacles = [];
         this.lastObstacleTime = 0;
+        this.obstacleFrequency = Math.max(800, 2000 - this.difficulty * 200); // 難易度に応じて障害物頻度を調整
+        
+        // お金アイテム
+        this.moneyItems = [];
+        this.lastMoneyTime = 0;
+        this.moneyFrequency = 3000; // 3秒ごとにお金アイテム生成
         
         // 倉庫と配達地点（画面上の表示位置）
         this.warehouseX = 30;
@@ -1337,6 +1350,13 @@ class TractorMiniGame {
         this.accelPower = 0.15; // 自動アクセルの強さ
         
         this.init();
+    }
+    
+    // 難易度計算（貨物価値に基づく）
+    calculateDifficulty(cargoValue) {
+        // 基準価格を800G（りんご10個）とし、それを超える分で難易度を上げる
+        const baseDifficulty = Math.max(0, Math.floor((cargoValue - 800) / 200));
+        return Math.min(baseDifficulty, 10); // 最大難易度10
     }
     
     init() {
@@ -1451,8 +1471,8 @@ class TractorMiniGame {
         this.distance += this.speed;
         this.worldOffset += this.speed;
         
-        // 障害物を生成（より頻繁に）
-        if (Date.now() - this.lastObstacleTime > 1200) { // 少し頻度を上げる
+        // 障害物を生成（難易度に応じて頻度調整）
+        if (Date.now() - this.lastObstacleTime > this.obstacleFrequency) {
             this.obstacles.push({
                 x: 700, // 画面右端から登場
                 y: Math.random() * 200 + 100, // 道路内にランダム配置（範囲を調整）
@@ -1463,13 +1483,34 @@ class TractorMiniGame {
             this.lastObstacleTime = Date.now();
         }
         
+        // お金アイテムを生成
+        if (Date.now() - this.lastMoneyTime > this.moneyFrequency) {
+            this.moneyItems.push({
+                x: 700, // 画面右端から登場
+                y: Math.random() * 200 + 100, // 道路内にランダム配置
+                type: '💰',
+                width: 20,
+                height: 20,
+                value: Math.floor(Math.random() * 50) + 10 // 10-60Gランダム
+            });
+            this.lastMoneyTime = Date.now();
+        }
+        
         // 障害物を移動（スクロール効果）
         this.obstacles.forEach(obstacle => {
             obstacle.x -= this.speed + 1; // 背景より少し速く移動
         });
         
+        // お金アイテムを移動
+        this.moneyItems.forEach(money => {
+            money.x -= this.speed + 1;
+        });
+        
         // 画面外の障害物を削除
         this.obstacles = this.obstacles.filter(obstacle => obstacle.x > -50);
+        
+        // 画面外のお金アイテムを削除
+        this.moneyItems = this.moneyItems.filter(money => money.x > -50);
         
         // 衝突判定
         this.obstacles.forEach(obstacle => {
@@ -1486,6 +1527,24 @@ class TractorMiniGame {
                 
                 // 衝突エフェクト（画面を少し揺らす）
                 this.shakeEffect = 8;
+            }
+        });
+        
+        // お金アイテムの衝突判定
+        this.moneyItems.forEach(money => {
+            if (this.checkCollision(this.tractorX, this.tractorY, 30, 30, money.x, money.y, money.width, money.height)) {
+                // お金を獲得
+                this.collectedMoney = (this.collectedMoney || 0) + money.value;
+                
+                // お金アイテムを削除
+                const index = this.moneyItems.indexOf(money);
+                if (index > -1) {
+                    this.moneyItems.splice(index, 1);
+                }
+                
+                // 獲得エフェクト
+                this.showMoneyEffect = 30; // 30フレーム表示
+                this.lastMoneyValue = money.value;
             }
         });
         
@@ -1634,6 +1693,12 @@ class TractorMiniGame {
             this.ctx.fillText(obstacle.type, obstacle.x, obstacle.y + 20);
         });
         
+        // お金アイテムを描画
+        this.moneyItems.forEach(money => {
+            this.ctx.font = '16px Arial';
+            this.ctx.fillText(money.type, money.x, money.y + 16);
+        });
+        
         // プログレスバー
         const progressPercent = this.distance / this.targetDistance;
         const progressWidth = (this.canvas.width - 40) * progressPercent;
@@ -1645,7 +1710,7 @@ class TractorMiniGame {
         // ゲーム情報を表示
         this.ctx.fillStyle = '#FFF';
         this.ctx.font = '14px Arial';
-        this.ctx.fillRect(10, 35, 220, 100);
+        this.ctx.fillRect(10, 35, 220, 130);
         this.ctx.fillStyle = '#000';
         this.ctx.fillText(`のこりじかん: ${this.gameTime}びょう`, 15, 50);
         
@@ -1655,12 +1720,25 @@ class TractorMiniGame {
         this.ctx.fillText(`ねんりょう: ${Math.floor(this.fuel)}%`, 15, 80);
         this.ctx.fillText(`そくど: ${Math.floor(this.speed * 10)}km/h`, 15, 95);
         this.ctx.fillText(`つみに: ${this.currentLoad}/${this.maxLoad}`, 15, 110);
+        this.ctx.fillText(`なんいど: ${this.difficulty}`, 15, 125);
+        this.ctx.fillText(`しゅうにゅう: ${this.cargoValue}G`, 15, 140);
+        if (this.collectedMoney > 0) {
+            this.ctx.fillText(`ボーナス: +${this.collectedMoney}G`, 15, 155);
+        }
         
         // ゴールが近い場合は特別な表示
         if (distanceToGoal < 100) {
             this.ctx.fillStyle = '#FF4500';
             this.ctx.font = 'bold 16px Arial';
-            this.ctx.fillText('🏁 ゴールちかく！', 15, 130);
+            this.ctx.fillText('🏁 ゴールちかく！', 15, 170);
+        }
+        
+        // お金獲得エフェクト
+        if (this.showMoneyEffect > 0) {
+            this.ctx.fillStyle = '#FFD700';
+            this.ctx.font = 'bold 18px Arial';
+            this.ctx.fillText(`+${this.lastMoneyValue}G!`, this.tractorX + 35, this.tractorY - 10);
+            this.showMoneyEffect--;
         }
         
         this.ctx.restore();
@@ -1681,7 +1759,7 @@ class TractorMiniGame {
         this.canvas.removeEventListener('touchmove', this.handleTouchMove);
         this.canvas.removeEventListener('touchend', this.handleTouchEnd);
         
-        // コールバックを呼び出し
-        this.onComplete(success, this.currentLoad);
+        // コールバックを呼び出し（獲得したお金も含める）
+        this.onComplete(success, this.currentLoad, this.collectedMoney || 0);
     }
 }
