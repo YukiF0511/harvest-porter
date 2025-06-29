@@ -32,14 +32,14 @@ class HarvestPorterGame {
             planter: {
                 name: 'うえてさん',
                 icon: '👨‍🌾',
-                hireCost: 300,
+                hireCost: 200,
                 wageCost: 50,
                 description: 'じどうてきにたねをうえます'
             },
             harvester: {
                 name: 'しゅうかくさん',
                 icon: '👩‍🌾',
-                hireCost: 400,
+                hireCost: 300,
                 wageCost: 60,
                 description: 'じどうてきにしゅうかくします'
             }
@@ -750,7 +750,7 @@ class HarvestPorterGame {
     
     // トラクター購入機能
     buyTractor() {
-        const tractorPrice = 1000; // トラクターの価格
+        const tractorPrice = 800; // トラクターの価格
         const maxTractors = 5; // 最大トラクター数
         
         if (this.tractors.length >= maxTractors) {
