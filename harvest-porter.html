@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ハーベスト・ポーター - のうぎょうけいえいシミュレーション</title>
+    <link rel="stylesheet" href="harvest-porter.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- ヘッダー -->
+        <header class="game-header">
+            <h1>🚜 ハーベスト・ポーター 🌾</h1>
+            <div class="header-controls">
+                <div class="money-display">
+                    💰 <span id="money">1000</span> G
+                </div>
+                <div class="header-buttons">
+                    <button class="save-button" onclick="game.saveGame()">💾 ほぞん</button>
+                    <button class="shop-button" onclick="toggleShop()">🏪 ショップ</button>
+                    <button class="menu-button" onclick="toggleGameMenu()">⚙️ メニュー</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- メインゲームエリア -->
+        <main class="game-main">
+            <!-- 種選択エリア -->
+            <div class="seed-selector-area">
+                <h3>🌰 植える種を選択</h3>
+                <div class="seed-selector" id="seed-selector">
+                    <!-- 種選択は動的に生成 -->
+                </div>
+            </div>
+
+            <!-- 畑エリア -->
+            <div class="farm-area">
+                <h2>🌱 農場</h2>
+                <div class="fields-container" id="fields-container">
+                    <!-- 畑は動的に生成 -->
+                </div>
+            </div>
+
+            <!-- 労働者エリア -->
+            <div class="workers-area">
+                <h2>👷 労働者</h2>
+                <div class="workers-container" id="workers-container">
+                    <!-- 労働者は動的に生成 -->
+                </div>
+            </div>
+
+            <!-- トラクターエリア -->
+            <div class="tractor-area">
+                <h2>🚜 トラクター</h2>
+                <div class="tractors-container" id="tractors-container">
+                    <!-- トラクターは動的に生成 -->
+                </div>
+            </div>
+        </main>
+
+        <!-- ショップモーダル -->
+        <div class="shop-modal" id="shop-modal">
+            <div class="shop-content">
+                <div class="shop-header">
+                    <h2>🏪 ショップ</h2>
+                    <button class="close-button" onclick="toggleShop()">✕</button>
+                </div>
+                
+                <div class="shop-tabs">
+                    <button class="tab-button active" onclick="switchTab('fields')">🌱 畑</button>
+                    <button class="tab-button" onclick="switchTab('tractors')">🚜 トラクター</button>
+                    <button class="tab-button" onclick="switchTab('workers')">👷 労働者</button>
+                    <button class="tab-button" onclick="switchTab('seeds')">🌰 種</button>
+                </div>
+
+                <div class="shop-sections">
+                    <!-- はたけこうにゅうセクション -->
+                    <div class="shop-section active" id="shop-fields">
+                        <div class="shop-item">
+                            <div class="item-info">
+                                <h3>🌱 新しい畑</h3>
+                                <p>作物を育てるための畑を追加します</p>
+                            </div>
+                            <div class="item-purchase">
+                                <span class="price" id="field-price">500 G</span>
+                                <button onclick="buyField()">こうにゅう</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- トラクターこうにゅうセクション -->
+                    <div class="shop-section" id="shop-tractors">
+                        <div class="shop-item">
+                            <div class="item-info">
+                                <h3>🚜 新しいトラクター</h3>
+                                <p>積載量: 10個 | 往復時間: 8秒</p>
+                            </div>
+                            <div class="item-purchase">
+                                <span class="price" id="tractor-price">2000 G</span>
+                                <button onclick="buyTractor()">こうにゅう</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ろうどうしゃこようセクション -->
+                    <div class="shop-section" id="shop-workers">
+                        <div class="shop-item">
+                            <div class="item-info">
+                                <h3>👨‍🌾 種植え作業員</h3>
+                                <p>空の畑に自動で種を植えます | 賃金: 100 G/30秒</p>
+                            </div>
+                            <div class="item-purchase">
+                                <span class="price">1500 G</span>
+                                <button onclick="game.hireWorker('planter')">こよう</button>
+                            </div>
+                        </div>
+                        <div class="shop-item">
+                            <div class="item-info">
+                                <h3>👩‍🌾 収穫作業員</h3>
+                                <p>収穫可能な作物を自動で収穫します | 賃金: 150 G/30秒</p>
+                            </div>
+                            <div class="item-purchase">
+                                <span class="price">2000 G</span>
+                                <button onclick="game.hireWorker('harvester')">こよう</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- たねこうにゅうセクション -->
+                    <div class="shop-section" id="shop-seeds">
+                        <div id="seeds-list">
+                            <!-- 種は動的に生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- トラクター操作モーダル -->
+        <div class="tractor-control-modal" id="tractor-control-modal">
+            <div class="tractor-control-content">
+                <div class="control-header">
+                    <h2>🚜 トラクター操作</h2>
+                    <button class="close-button" onclick="closeTractorControl()">✕</button>
+                </div>
+                
+                <div class="tractor-game-area">
+                    <canvas id="tractor-canvas" width="600" height="400"></canvas>
+                    <div class="control-instructions">
+                        <p>🖱️ マウス移動: 上下操作</p>
+                        <p>🖱️ 左クリック: アクセル</p>
+                        <p>🖱️ 右クリック: ブレーキ</p>
+                        <p>🎯 目標: 荷物を配達地点まで運ぼう！</p>
+                    </div>
+                    <div class="game-stats">
+                        <div class="stat">速度: <span id="tractor-speed">0</span> km/h</div>
+                        <div class="stat">距離: <span id="tractor-distance">0</span> m</div>
+                        <div class="stat">燃料: <span id="tractor-fuel">100</span>%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ゲームメニューモーダル -->
+        <div class="game-menu-modal" id="game-menu-modal">
+            <div class="menu-content">
+                <div class="menu-header">
+                    <h2>⚙️ ゲームメニュー</h2>
+                    <button class="close-button" onclick="toggleGameMenu()">✕</button>
+                </div>
+                
+                <div class="menu-options">
+                    <div class="menu-section">
+                        <h3>💾 セーブ・ロード</h3>
+                        <div class="menu-buttons">
+                            <button onclick="game.saveGame()" class="menu-btn save">
+                                💾 しゅどうほぞん
+                            </button>
+                            <button onclick="game.exportSave()" class="menu-btn export">
+                                📤 セーブファイル出力
+                            </button>
+                            <label for="import-file" class="menu-btn import">
+                                📥 セーブファイル読込
+                            </label>
+                            <input type="file" id="import-file" accept=".json" style="display: none;" onchange="game.importSave(event)">
+                        </div>
+                        <p class="menu-note">※ ゲームは30びょうごとにじどうほぞんされます</p>
+                    </div>
+                    
+                    <div class="menu-section">
+                        <h3>🔄 ゲーム管理</h3>
+                        <div class="menu-buttons">
+                            <button onclick="game.resetGame()" class="menu-btn reset">
+                                🗑️ ゲームリセット
+                            </button>
+                        </div>
+                        <p class="menu-note">※ リセットすると全ての進行状況が失われます</p>
+                    </div>
+                    
+                    <div class="menu-section">
+                        <h3>💸 はさんシステム</h3>
+                        <div class="menu-buttons">
+                            <button id="bankruptcy-toggle" onclick="game.toggleBankruptcySystem()" class="menu-btn bankruptcy-off">
+                                💰 はさんシステム: OFF
+                            </button>
+                        </div>
+                        <p class="menu-note">
+                            ON: おかねがなくなるとゲームオーバー<br>
+                            OFF: おかねがなくなるとえんじょきんがもらえる
+                        </p>
+                    </div>
+                    
+                    <div class="menu-section">
+                        <h3>ℹ️ ゲーム情報</h3>
+                        <div class="game-stats">
+                            <p>🌱 畑の数: <span id="field-count">1</span></p>
+                            <p>🚜 トラクターの数: <span id="tractor-count">1</span></p>
+                            <p>🌰 所持している種: <span id="seed-count">2</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 種選択モーダル -->
+        <div class="seed-modal" id="seed-modal">
+            <div class="seed-content">
+                <h3>🌰 植える種を選択</h3>
+                <div class="seed-options" id="seed-options">
+                    <!-- 種オプションは動的に生成 -->
+                </div>
+                <button class="close-button" onclick="closeSeedModal()">キャンセル</button>
+            </div>
+        </div>
+
+        <!-- 通知エリア -->
+        <div class="notifications" id="notifications"></div>
+        
+        <!-- デバッグ用倍速ボタン -->
+        <div class="debug-controls">
+            <button id="speed-toggle-btn" class="speed-toggle-btn" onclick="toggleGameSpeed()">
+                <span id="speed-text">1x</span>
+                <span class="speed-icon">⚡</span>
+            </button>
+        </div>
+    </div>
+
+    <script src="harvest-porter.js"></script>
+</body>
+</html>
