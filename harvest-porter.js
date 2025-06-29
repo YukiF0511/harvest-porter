@@ -720,7 +720,7 @@ class HarvestPorterGame {
     // 畑購入機能
     buyField() {
         const fieldPrice = 500; // 畑の価格
-        const maxFields = 10; // 最大畑数
+        const maxFields = 50; // 最大畑数
         
         if (this.fields.length >= maxFields) {
             this.showNotification(`🚫 はたけは${maxFields}こまでしかかえません`, 'warning');
